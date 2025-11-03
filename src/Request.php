@@ -386,7 +386,7 @@ class Request
         return $this;
     }
 
-    public function attach(string $name, string $contents, string $filename = null, array $headers = []): static {
+    public function attach(string $name, string $contents, ?string $filename = null, array $headers = []): static {
         $this->options['multipart'] = array_filter([
             'name'     => $name,
             'contents' => $contents,
@@ -399,6 +399,7 @@ class Request
 	
 	/**
 	 * @throws ConnectionException
+	 * @throws GuzzleException
 	 */
 	public function get(string $url, array $query = []): Response {
         $params = parse_url($url, PHP_URL_QUERY);
@@ -412,6 +413,7 @@ class Request
 	
 	/**
 	 * @throws ConnectionException
+	 * @throws GuzzleException
 	 */
 	public function post(string $url, array $data = []): Response {
         $this->options[$this->bodyFormat] = $data;
@@ -421,6 +423,7 @@ class Request
 	
 	/**
 	 * @throws ConnectionException
+	 * @throws GuzzleException
 	 */
 	public function patch(string $url, array $data = []): Response {
         $this->options[$this->bodyFormat] = $data;
@@ -430,6 +433,7 @@ class Request
 	
 	/**
 	 * @throws ConnectionException
+	 * @throws GuzzleException
 	 */
 	public function put(string $url, array $data = []): Response {
         $this->options[$this->bodyFormat] = $data;
@@ -439,6 +443,7 @@ class Request
 	
 	/**
 	 * @throws ConnectionException
+	 * @throws GuzzleException
 	 */
 	public function delete(string $url, array $data = []): Response {
         $this->options[$this->bodyFormat] = $data;
@@ -448,6 +453,7 @@ class Request
 	
 	/**
 	 * @throws ConnectionException
+	 * @throws GuzzleException
 	 */
 	public function head(string $url, array $data = []): Response {
         $this->options[$this->bodyFormat] = $data;
@@ -457,6 +463,7 @@ class Request
 	
 	/**
 	 * @throws ConnectionException
+	 * @throws GuzzleException
 	 */
 	public function options(string $url, array $data = []): Response {
         $this->options[$this->bodyFormat] = $data;
@@ -647,7 +654,7 @@ class Request
 	/**
 	 * @throws ConnectionException
 	 */
-	protected function requestAsync(string $method, string $url, $options = null, callable $success = null, callable $fail = null): Promise\PromiseInterface {
+	protected function requestAsync(string $method, string $url, $options = null, ?callable $success = null, ?callable $fail = null): Promise\PromiseInterface {
         if (is_callable($options)) {
             $successCallback = $options;
             $failCallback    = $success;
