@@ -40,10 +40,10 @@ class Logger
     /**
      * Creates a callable middleware for logging requests and responses.
      *
-     * @param LoggerInterface|callable $logger
-     * @param string|callable Constant or callable that accepts a Response.
+     * @param callable|LoggerInterface $logger
+     * @param callable|string|null     $formatter Constant or callable that accepts a Response.
      */
-    public function __construct($logger, $formatter = null)
+    public function __construct(callable|LoggerInterface $logger, callable|string|null $formatter = null)
     {
         // Use the setters to take care of type validation
         $this->setLogger($logger);
@@ -55,8 +55,7 @@ class Logger
      *
      * @return MessageFormatter
      */
-    protected function getDefaultFormatter()
-    {
+    protected function getDefaultFormatter(): MessageFormatter {
         return new MessageFormatter();
     }
 
@@ -65,8 +64,7 @@ class Logger
      *
      * @param boolean $logRequests
      */
-    public function setRequestLoggingEnabled($logRequests = true)
-    {
+    public function setRequestLoggingEnabled(bool $logRequests = true): void {
         $this->logRequests = (bool) $logRequests;
     }
 
@@ -78,8 +76,7 @@ class Logger
      *
      * @throws InvalidArgumentException
      */
-    public function setLogger($logger)
-    {
+    public function setLogger($logger): void {
         if ($logger instanceof LoggerInterface || is_callable($logger)) {
             $this->logger = $logger;
         } else {
@@ -97,8 +94,7 @@ class Logger
      *
      * @throws InvalidArgumentException
      */
-    public function setFormatter($formatter)
-    {
+    public function setFormatter($formatter): void {
         if ($formatter instanceof MessageFormatter || is_callable($formatter)) {
             $this->formatter = $formatter;
         } else {
@@ -113,26 +109,25 @@ class Logger
      * that accepts a response (which could be null). A log level could also
      * be null, which indicates that the default log level should be used.
      *
-     * @param string|callable|null
+     * @param callable|string|null $logLevel
      */
-    public function setLogLevel($logLevel)
-    {
+    public function setLogLevel(callable|string|null $logLevel): void {
         $this->logLevel = $logLevel;
     }
 
     /**
      * Logs a request and/or a response.
      *
-     * @param RequestInterface $request
+     * @param RequestInterface       $request
      * @param ResponseInterface|null $response
      * @param $reason
      * @return mixed
      */
     protected function log(
-        RequestInterface $request,
-        ResponseInterface $response = null,
-        $reason = null
-    ) {
+	    RequestInterface   $request,
+	    ?ResponseInterface $response = null,
+	                       $reason = null
+    ): mixed {
         if ($reason instanceof RequestException) {
             $response = $reason->getResponse();
         }
@@ -156,17 +151,17 @@ class Logger
     /**
      * Formats a request and response as a log message.
      *
-     * @param RequestInterface $request
+     * @param RequestInterface       $request
      * @param ResponseInterface|null $response
-     * @param mixed $reason
+     * @param mixed|null             $reason
      *
      * @return string The formatted message.
      */
     protected function getLogMessage(
-        RequestInterface $request,
-        ResponseInterface $response = null,
-        $reason = null
-    ) {
+	    RequestInterface   $request,
+	    ?ResponseInterface $response = null,
+	    mixed $reason = null
+    ): string {
         if ($this->formatter instanceof MessageFormatter) {
             return $this->formatter->format(
                 $request,
@@ -177,16 +172,15 @@ class Logger
 
         return call_user_func($this->formatter, $request, $response, $reason);
     }
-
-    /**
-     * Returns a log level for a given response.
-     *
-     * @param ResponseInterface $response The response being logged.
-     *
-     * @return string LogLevel
-     */
-    protected function getLogLevel(ResponseInterface $response = null)
-    {
+	
+	/**
+	 * Returns a log level for a given response.
+	 *
+	 * @param ResponseInterface|null $response The response being logged.
+	 *
+	 * @return string LogLevel
+	 */
+    protected function getLogLevel(ResponseInterface $response = null): string {
         if ( ! $this->logLevel) {
             return $this->getDefaultLogLevel($response);
         }
@@ -205,7 +199,7 @@ class Logger
      *
      * @return string LogLevel
      */
-    protected function getDefaultLogLevel(ResponseInterface $response = null) {
+    protected function getDefaultLogLevel(ResponseInterface $response = null): string {
         if ($response && $response->getStatusCode() >= 300) {
             return LogLevel::NOTICE;
         }
@@ -220,8 +214,7 @@ class Logger
      *
      * @return \Closure
      */
-    protected function onSuccess(RequestInterface $request)
-    {
+    protected function onSuccess(RequestInterface $request): \Closure {
         return function ($response) use ($request) {
             $this->log($request, $response);
             return $response;
@@ -235,16 +228,13 @@ class Logger
      *
      * @return \Closure
      */
-    protected function onFailure(RequestInterface $request)
-    {
+    protected function onFailure(RequestInterface $request): \Closure {
         return function ($reason) use ($request) {
-
-            // Only log a rejected request if it hasn't already been logged.
             if ( ! $this->logRequests) {
                 $this->log($request, null, $reason);
             }
-
-            return Promise\rejection_for($reason);
+	        $promise = new Promise\Promise();
+	        $promise->reject($reason);
         };
     }
 
@@ -255,8 +245,7 @@ class Logger
      *
      * @return \Closure
      */
-    public function __invoke(callable $handler)
-    {
+    public function __invoke(callable $handler): \Closure {
         return function ($request, array $options) use ($handler) {
 
             // Only log requests if explicitly set to do so

@@ -2,6 +2,7 @@
 
 namespace yzh52521\EasyHttp;
 
+use GuzzleHttp\Exception\GuzzleException;
 use GuzzleHttp\Handler\CurlHandler;
 use GuzzleHttp\HandlerStack;
 
@@ -11,6 +12,7 @@ use GuzzleHttp\Client;
 use GuzzleHttp\Promise;
 use GuzzleHttp\Cookie\CookieJar;
 use GuzzleHttp\Exception\ConnectException;
+use GuzzleHttp\Utils;
 
 /**
  * @method \yzh52521\EasyHttp\Response body()
@@ -141,8 +143,7 @@ class Request
         return $this;
     }
 
-    public function asMultipart(string $name, string $contents, string $filename = null, array $headers = [])
-    {
+    public function asMultipart(string $name, string $contents, ?string $filename = null, array $headers = []): static {
         $this->bodyFormat = 'multipart';
 
         $this->options = array_filter([
@@ -155,8 +156,7 @@ class Request
         return $this;
     }
 
-    public function withMiddleware(callable $middleware)
-    {
+    public function withMiddleware(callable $middleware): static {
         $this->handlerStack->push($middleware);
 
         $this->options['handler'] = $this->handlerStack;
@@ -164,8 +164,7 @@ class Request
         return $this;
     }
 
-    public function withRequestMiddleware(callable $middleware)
-    {
+    public function withRequestMiddleware(callable $middleware): static {
         $this->handlerStack->push(Middleware::mapRequest($middleware));
 
         $this->options['handler'] = $this->handlerStack;
@@ -173,8 +172,7 @@ class Request
         return $this;
     }
 
-    public function withResponseMiddleware(callable $middleware)
-    {
+    public function withResponseMiddleware(callable $middleware): static {
         $this->handlerStack->push(Middleware::mapResponse($middleware));
 
         $this->options['handler'] = $this->handlerStack;
@@ -182,15 +180,13 @@ class Request
         return $this;
     }
 
-    public function withHost(string $host)
-    {
+    public function withHost(string $host): static {
         $this->options['base_uri'] = $host;
 
         return $this;
     }
 
-    public function withOptions(array $options)
-    {
+    public function withOptions(array $options): static {
         unset($this->options[$this->bodyFormat], $this->options['body']);
 
         $this->options = array_merge_recursive($this->options, $options);
@@ -198,15 +194,13 @@ class Request
         return $this;
     }
 
-    public function withCert(string $path, string $password)
-    {
+    public function withCert(string $path, string $password): static {
         $this->options['cert'] = [$path, $password];
 
         return $this;
     }
 
-    public function withHeaders(array $headers)
-    {
+    public function withHeaders(array $headers): static {
         $this->options = array_merge_recursive($this->options, [
             'headers' => $headers,
         ]);
@@ -214,8 +208,7 @@ class Request
         return $this;
     }
 
-    public function withBody($content, $contentType = 'application/json')
-    {
+    public function withBody($content, $contentType = 'application/json'): static {
         $this->bodyFormat = 'body';
 
         $this->options['headers']['Content-Type'] = $contentType;
@@ -225,36 +218,31 @@ class Request
         return $this;
     }
 
-    public function withBasicAuth(string $username, string $password)
-    {
+    public function withBasicAuth(string $username, string $password): static {
         $this->options['auth'] = [$username, $password];
 
         return $this;
     }
 
-    public function withDigestAuth(string $username, string $password)
-    {
+    public function withDigestAuth(string $username, string $password): static {
         $this->options['auth'] = [$username, $password, 'digest'];
 
         return $this;
     }
 
-    public function withUA(string $ua)
-    {
+    public function withUA(string $ua): static {
         $this->options['headers']['User-Agent'] = trim($ua);
 
         return $this;
     }
 
-    public function withToken(string $token, string $type = 'Bearer')
-    {
+    public function withToken(string $token, string $type = 'Bearer'): static {
         $this->options['headers']['Authorization'] = trim($type . ' ' . $token);
 
         return $this;
     }
 
-    public function withCookies(array $cookies, string $domain)
-    {
+    public function withCookies(array $cookies, string $domain): static {
         $this->options = array_merge_recursive($this->options, [
             'cookies' => CookieJar::fromArray($cookies, $domain),
         ]);
@@ -262,80 +250,69 @@ class Request
         return $this;
     }
 
-    public function withProxy($proxy)
-    {
+    public function withProxy($proxy): static {
         $this->options['proxy'] = $proxy;
 
         return $this;
     }
 
-    public function withVersion($version)
-    {
+    public function withVersion($version): static {
         $this->options['version'] = $version;
 
         return $this;
     }
 
-    public function maxRedirects(int $max)
-    {
+    public function maxRedirects(int $max): static {
         $this->options['allow_redirects']['max'] = $max;
 
         return $this;
     }
 
-    public function withRedirect($redirect = false)
-    {
+    public function withRedirect($redirect = false): static {
         $this->options['allow_redirects'] = $redirect;
 
         return $this;
     }
 
-    public function withVerify($verify = false)
-    {
+    public function withVerify($verify = false): static {
         $this->options['verify'] = $verify;
 
         return $this;
     }
 
-    public function withStream($boolean = false)
-    {
+    public function withStream($boolean = false): static {
         $this->options['stream'] = $boolean;
 
         return $this;
     }
 
-    public function concurrency(int $times)
-    {
+    public function concurrency(int $times): static {
         $this->concurrency = $times;
 
         return $this;
     }
 
-    public function retry(int $retries = 1, int $sleep = 0)
-    {
-        $this->handlerStack->push((new Retry())->handle($retries, $sleep));
+    public function retry(int $retries = 1, int $sleep = 0): static {
+        $this->handlerStack->push(new Retry()->handle($retries, $sleep));
 
         $this->options['handler'] = $this->handlerStack;
 
         return $this;
     }
 
-    public function delay(int $seconds)
-    {
+    public function delay(int $seconds): static {
         $this->options['delay'] = $seconds * 1000;
 
         return $this;
     }
 
-    public function timeout(float $seconds)
-    {
+    public function timeout(float $seconds): static {
         $this->options['timeout'] = $seconds;
 
         return $this;
     }
 
-    public function connectTimeout(float $seconds)
-    {
+    public function connectTimeout(float $seconds): static {
         $this->options['connect_timeout'] = $seconds;
 
         return $this;
@@ -345,21 +322,18 @@ class Request
      * @param string|resource $to
      * @return $this
      */
-    public function sink($to)
-    {
+    public function sink($to): static {
         $this->options['sink'] = $to;
 
         return $this;
     }
 
-    public function removeBodyFormat()
-    {
+    public function removeBodyFormat(): static {
         $this->isRemoveBodyFormat = true;
         return $this;
     }
 
-    public function debug($class)
-    {
+    public function debug($class): static {
         $logger = new Logger(function ($level, $message, array $context) use ($class) {
             $class::log($level, $message);
         }, function ($request, $response, $reason) {
@@ -412,8 +386,7 @@ class Request
         return $this;
     }
 
-    public function attach(string $name, string $contents, string $filename = null, array $headers = [])
-    {
+    public function attach(string $name, string $contents, string $filename = null, array $headers = []): static {
         $this->options['multipart'] = array_filter([
             'name'     => $name,
             'contents' => $contents,
@@ -423,9 +396,11 @@ class Request
 
         return $this;
     }
-
-    public function get(string $url, array $query = [])
-    {
+	
+	/**
+	 * @throws ConnectionException
+	 */
+	public function get(string $url, array $query = []): Response {
         $params = parse_url($url, PHP_URL_QUERY);
 
         parse_str($params ?: '', $result);
@@ -434,100 +409,125 @@ class Request
 
         return $this->request('GET', $url, $query);
     }
-
-    public function post(string $url, array $data = [])
-    {
+	
+	/**
+	 * @throws ConnectionException
+	 */
+	public function post(string $url, array $data = []): Response {
         $this->options[$this->bodyFormat] = $data;
 
         return $this->request('POST', $url, $data);
     }
-
-    public function patch(string $url, array $data = [])
-    {
+	
+	/**
+	 * @throws ConnectionException
+	 */
+	public function patch(string $url, array $data = []): Response {
         $this->options[$this->bodyFormat] = $data;
 
         return $this->request('PATCH', $url, $data);
     }
-
-    public function put(string $url, array $data = [])
-    {
+	
+	/**
+	 * @throws ConnectionException
+	 */
+	public function put(string $url, array $data = []): Response {
         $this->options[$this->bodyFormat] = $data;
 
         return $this->request('PUT', $url, $data);
     }
-
-    public function delete(string $url, array $data = [])
-    {
+	
+	/**
+	 * @throws ConnectionException
+	 */
+	public function delete(string $url, array $data = []): Response {
         $this->options[$this->bodyFormat] = $data;
 
         return $this->request('DELETE', $url, $data);
     }
-
-    public function head(string $url, array $data = [])
-    {
+	
+	/**
+	 * @throws ConnectionException
+	 */
+	public function head(string $url, array $data = []): Response {
         $this->options[$this->bodyFormat] = $data;
 
         return $this->request('HEAD', $url, $data);
     }
-
-    public function options(string $url, array $data = [])
-    {
+	
+	/**
+	 * @throws ConnectionException
+	 */
+	public function options(string $url, array $data = []): Response {
         $this->options[$this->bodyFormat] = $data;
 
         return $this->request('OPTIONS', $url, $data);
     }
-
-    public function getAsync(string $url, $query = null, callable $success = null, callable $fail = null)
-    {
+	
+	/**
+	 * @throws ConnectionException
+	 */
+	public function getAsync(string $url, $query = null, ?callable $success = null, ?callable $fail = null): Promise\PromiseInterface {
         is_callable($query) || $this->options['query'] = $query;
 
         return $this->requestAsync('GET', $url, $query, $success, $fail);
     }
-
-    public function postAsync(string $url, $data = null, callable $success = null, callable $fail = null)
-    {
+	
+	/**
+	 * @throws ConnectionException
+	 */
+	public function postAsync(string $url, $data = null, ?callable $success = null, ?callable $fail = null): Promise\PromiseInterface {
         is_callable($data) || $this->options[$this->bodyFormat] = $data;
 
         return $this->requestAsync('POST', $url, $data, $success, $fail);
     }
-
-    public function patchAsync(string $url, $data = null, callable $success = null, callable $fail = null)
-    {
+	
+	/**
+	 * @throws ConnectionException
+	 */
+	public function patchAsync(string $url, $data = null, ?callable $success = null, ?callable $fail = null): Promise\PromiseInterface {
         is_callable($data) || $this->options[$this->bodyFormat] = $data;
 
         return $this->requestAsync('PATCH', $url, $data, $success, $fail);
     }
-
-    public function putAsync(string $url, $data = null, callable $success = null, callable $fail = null)
-    {
+	
+	/**
+	 * @throws ConnectionException
+	 */
+	public function putAsync(string $url, $data = null, ?callable $success = null, ?callable $fail = null): Promise\PromiseInterface {
         is_callable($data) || $this->options[$this->bodyFormat] = $data;
 
         return $this->requestAsync('PUT', $url, $data, $success, $fail);
     }
-
-    public function deleteAsync(string $url, $data = null, callable $success = null, callable $fail = null)
-    {
+	
+	/**
+	 * @throws ConnectionException
+	 */
+	public function deleteAsync(string $url, $data = null, ?callable $success = null, ?callable $fail = null): Promise\PromiseInterface {
         is_callable($data) || $this->options[$this->bodyFormat] = $data;
 
         return $this->requestAsync('DELETE', $url, $data, $success, $fail);
     }
-
-    public function headAsync(string $url, $data = null, callable $success = null, callable $fail = null)
-    {
+	
+	/**
+	 * @throws ConnectionException
+	 */
+	public function headAsync(string $url, $data = null, ?callable $success = null, ?callable $fail = null): Promise\PromiseInterface {
         is_callable($data) || $this->options[$this->bodyFormat] = $data;
 
         return $this->requestAsync('HEAD', $url, $data, $success, $fail);
     }
-
-    public function optionsAsync(string $url, $data = null, callable $success = null, callable $fail = null)
-    {
+	
+	/**
+	 * @throws ConnectionException
+	 */
+	public function optionsAsync(string $url, $data = null, ?callable $success = null, ?callable $fail = null): Promise\PromiseInterface {
         is_callable($data) || $this->options[$this->bodyFormat] = $data;
 
         return $this->requestAsync('OPTIONS', $url, $data, $success, $fail);
     }
 
-    public function multiAsync(array $promises, callable $success = null, callable $fail = null)
-    {
+    public function multiAsync(array $promises, ?callable $success = null, ?callable $fail = null): Pool {
         $count = count($promises);
 
         $this->concurrency = $this->concurrency ?: $count;
@@ -564,9 +564,12 @@ class Request
 
         return $pool;
     }
-
-    protected function request(string $method, string $url, array $options = [])
-    {
+	
+	/**
+	 * @throws GuzzleException
+	 * @throws ConnectionException
+	 */
+	protected function request(string $method, string $url, array $options = []): Response {
         if (isset($this->options[$this->bodyFormat])) {
             $this->options[$this->bodyFormat] = $options;
         } else {
@@ -590,10 +593,9 @@ class Request
      * @param array $options
      * @return Response
      * @throws ConnectionException
-     * @throws \GuzzleHttp\Exception\GuzzleException
+     * @throws GuzzleException
      */
-    public function client(string $method, string $url, array $options = [])
-    {
+    public function client(string $method, string $url, array $options = []): Response {
         if (isset($this->options[$this->bodyFormat])) {
             $this->options[$this->bodyFormat] = $options;
         } else {
@@ -621,8 +623,7 @@ class Request
      * @return Response
      * @throws ConnectionException
      */
-    public function clientAsync(string $method, string $url, array $options = [])
-    {
+    public function clientAsync(string $method, string $url, array $options = []): Response {
         if (isset($this->options[$this->bodyFormat])) {
             $this->options[$this->bodyFormat] = $options;
         } else {
@@ -641,10 +642,12 @@ class Request
             throw new ConnectionException($e->getMessage(), 0, $e);
         }
     }
-
-
-    protected function requestAsync(string $method, string $url, $options = null, callable $success = null, callable $fail = null)
-    {
+	
+	
+	/**
+	 * @throws ConnectionException
+	 */
+	protected function requestAsync(string $method, string $url, $options = null, callable $success = null, callable $fail = null): Promise\PromiseInterface {
         if (is_callable($options)) {
             $successCallback = $options;
             $failCallback    = $success;
@@ -690,21 +693,19 @@ class Request
         }
     }
 
-    public function wait()
-    {
+    public function wait(): void {
         if (!empty($this->promises)) {
-            \GuzzleHttp\Promise\Utils($this->promises)->wait();
+			Promise\Utils::any($this->promises)->wait();
+//            \GuzzleHttp\Promise\Utils($this->promises)->wait();
         }
         $this->promises = [];
     }
 
-    protected function response($response)
-    {
+    protected function response($response): Response {
         return new Response($response);
     }
 
-    protected function exception($exception)
-    {
+    protected function exception($exception): RequestException {
         return new RequestException($exception);
     }
 

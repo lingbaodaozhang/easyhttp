@@ -13,13 +13,11 @@ use GuzzleHttp\Exception\ConnectException;
 class Retry
 {
 
-    public function handle($retries,$sleep)
-    {
+    public function handle($retries,$sleep): callable {
        return  Middleware::retry($this->decider($retries), $this->delay($sleep));
     }
 
-    protected function decider(int $times)
-    {
+    protected function decider(int $times): \Closure {
         return function (
             $retries,
             Request $request,
@@ -39,8 +37,7 @@ class Retry
      * @param int $retry_delay
      * @return \Closure
      */
-    protected function delay(int $retry_delay)
-    {
+    protected function delay(int $retry_delay): \Closure {
         return function ($retries) use ($retry_delay) {
             return $retry_delay * $retries;
         };
